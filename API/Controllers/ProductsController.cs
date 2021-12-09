@@ -2,6 +2,7 @@
 using API.Core.Interfaces;
 using API.Core.Specifications;
 using API.Dtos;
+using API.Helpers;
 using API.infrastructure.DataContext;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
@@ -34,10 +35,15 @@ namespace API.Controllers
         
 
         [HttpGet] //http-verbs
-        public async Task<ActionResult<IReadOnlyList<ProductToolReturnDto>>> GetProducts()
+        public async Task<ActionResult<Pagination<ProductToolReturnDto>>> GetProducts([FromQuery]ProductSpecParams productSpecParams)
         {
-            var spec = new ProductsWithProductTypeAndBrandSpecification();
-            var data = await _ProductRepository.ListAsync(spec);
+            var spec = new ProductsWithProductTypeAndBrandSpecification(productSpecParams);
+           
+
+
+            var CountSpec = new ProductsWithProductTypeAndBrandSpecification(productSpecParams);
+            var TotalItems = await _ProductRepository.CountAsync(spec);
+            var products = await _ProductRepository.ListAsync(spec);
             // return Ok(data);
             /*  return data.Select(pro => new ProductToolReturnDto
               {
@@ -50,7 +56,8 @@ namespace API.Controllers
                   ProductType = pro.ProductType.Name != null ? pro.ProductType.Name : string.Empty
               }).ToList();
          */
-            return Ok(_mapper.Map<IReadOnlyList<Product>, IReadOnlyList<ProductToolReturnDto>>(data));
+            var data = _mapper.Map<IReadOnlyList<Product>, IReadOnlyList<ProductToolReturnDto>>(products);
+            return Ok(new Pagination<ProductToolReturnDto>(productSpecParams.PageIndex,productSpecParams.PageSize,TotalItems,data));
         }
         [HttpGet("{id}")]
         public async Task<ActionResult<ProductToolReturnDto>> GetProduct(int id)
